@@ -5,13 +5,10 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract DEX {
 
-    IERC20 token;
-    struct Token{
-        uint amountTokenA;
-        uint amountTokenB;
-        uint totalLiquidity;
-    }
+    // Variables, Events 
 
+    new Event
+    IERC20 token;  
     uint256 public totalLiquidity;
     mapping (address=>uint256) tokenLiquidity;
 
@@ -20,36 +17,36 @@ contract DEX {
         _;
     }
 
+    // Fallback
     function () external payable {
-    ethToTokenInput(msg.value, 1, block.timestamp, msg.sender, msg.sender);
-  }
+      ethToTokenInput(msg.value, 1, block.timestamp, msg.sender, msg.sender);
+    }
 
+    // Initializer
     function initialize(address _tokenAddress, uint256 _tokenAmount) firstTimeOnly payable external {
         totalLiquidity = msg.value;
         tokenLiquidity[msg.sender] = totalLiquidity;
         require(token(_tokenAddress).transferForom(smg.sender, address(this), _tokenAmount);        
     }
 
-    function inputWantedTokensNoFees(uint256 _inputAmount, uint256 _tokenReserve) public returns(uint256){
-        return ( _inputAmount * _tokenReserve) / address(this).balance;
-    }
-    function outputWantedTokensNoFees(uint256 _outputTokens, uint256 _tokenReserve) public returns(uint256){
+    // Token Price Calculator
+    function tokenPrice(uint256 _inputAmount, uint256 _tokenReserve) public returns(uint256){
         return ( _inputAmount * _tokenReserve) / address(this).balance;
     }
 
-    function ethToToken(address _tokenAddress) external payable{
+    // Transaction functions
+    function ethToToken(address _tokenAddress) external payable {
         uint256 tokenReserve = token(_tokenAddress).balanceOf(this(address));
-        //determine token price
-        uint256 tokenAmount = inputWantedTokensNoFees(msg.value, tokenReserve)
+        uint256 tokenAmount = tokenPrice(msg.value, tokenReserve)
         request(token(_tokenAddress).transfer(msg.sender, tokenAmount), "Transaction Failed!");
     }
 
     function tokenToEth(address _tokenAddress, uint _tokenAmount) external{
         request(token(_tokenAddress).transferFrom(msg.sender, address(this), _tokenAmount))
-
+        tokenPrice = tokenPrice(_tokenAmount, )
         // claculate token price
 
-        (bool sucess,) = payable(msg.sender).call{value: }("")
+        (bool success,) = payable(msg.sender).call{value: msg.value}("")
     }
 
     function deposite() external{
@@ -63,6 +60,16 @@ contract DEX {
 
 
 }
+
+ /**
+   * @dev Pricing function for converting between ETH && Tokens.
+   * @param output_amount Amount of ETH or Tokens being bought.
+   * @param input_reserve Amount of ETH or Tokens (input type) in exchange reserves.
+   * @param output_reserve Amount of ETH or Tokens (output type) in exchange reserves.
+   * @return Amount of ETH or Tokens sold.
+   */
+
+  getOutputPrice(tokens_bought, address(this).balance.sub(max_eth), token_reserve);
 
   function getOutputPrice(uint256 output_amount, uint256 input_reserve, uint256 output_reserve) public view returns (uint256) {
     require(input_reserve > 0 && output_reserve > 0); 

@@ -1,8 +1,8 @@
 module.exports = {
   env: {
     browser: false,
-    es2021: true,
-    mocha: true,
+    es2021: false,
+    mocha: false,
     node: true,
   },
   plugins: ["@typescript-eslint"],

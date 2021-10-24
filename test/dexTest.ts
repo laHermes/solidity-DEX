@@ -12,7 +12,8 @@ describe("DEX", async () => {
   let gold: Contract;
 
   const approvalAmount = "100";
-  const tokenAndEth = ethers.utils.parseEther("1");
+  const tokenAndEth = ethers.utils.parseEther("10");
+  const exchangeTokens = ethers.utils.parseEther("0.5");
 
   before("Should be deployed", async () => {
     [owner] = await ethers.getSigners();
@@ -38,5 +39,11 @@ describe("DEX", async () => {
     const totalLiq = await dex.totalLiquidity();
     expect(totalLiq === tokenAndEth);
     expect(dex.balance === tokenAndEth);
+  });
+
+  it("Exchange eth for the token", async () => {
+    await dex.ethToToken(gold.address, { value: exchangeTokens });
+    const tokenBalance = await gold.balanceOf(owner.address);
+    console.log(ethers.utils.formatEther(tokenBalance));
   });
 });

@@ -12,12 +12,13 @@ contract DEX {
     mapping (address=>uint256) tokenLiquidity;
 
     modifier firstTimeOnly{
-        require(totalLiquidity == 0, "DEX already init!");
+        require(totalLiquidity == 0, "DEX::initialize: already init!");
         _;
     }
 
+    
     // Fallback
-    // receive () external payable {
+    // fallback () external payable {
     //   ethToToken(msg.value, 1, block.timestamp, msg.sender, msg.sender);
     // }
 
@@ -25,10 +26,6 @@ contract DEX {
         totalLiquidity = msg.value;
         tokenLiquidity[msg.sender] = totalLiquidity;
         require(IERC20(_tokenAddress).transferFrom(msg.sender, address(this), _tokenAmount));        
-    }
-
-    function tokenPrice(uint256 _inputAmount, uint256 _tokenReserve) public view returns(uint256){
-        return ( _inputAmount * _tokenReserve) / address(this).balance;
     }
 
     function ethToToken(address _tokenAddress) external payable {
@@ -51,6 +48,13 @@ contract DEX {
     function withdraw() external{
 
     }
+
+    function tokenPrice(uint256 _inputAmount, uint256 _tokenReserve) public view returns(uint256){
+        return ((( _inputAmount * _tokenReserve) * 1000) / (address(this).balance * 1000)) + 1;
+    }
+
+
+
 
 
 

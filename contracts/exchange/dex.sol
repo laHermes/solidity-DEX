@@ -8,45 +8,43 @@ contract DEX {
     IERC20 token;  
     uint256 public totalLiquidity;
     mapping (address=>uint256) public tokenLiquidity;
-
-    modifier firstTimeOnly{
-        require(totalLiquidity == 0, "DEX::initialize: already init!");
-        _;
+       
+    fallback () external payable {
+       ethToToken(msg.value);
     }
-    
-    // Fallback
-    // fallback () external payable {
-    //   ethToToken(msg.value, 1, block.timestamp, msg.sender, msg.sender);
-    // }
 
     function initialize(address _tokenAddress, uint256 _tokenAmount) firstTimeOnly payable external {
+        require(totalLiquidity == 0, "DEX::initialize: already init!");
         totalLiquidity = msg.value;
         tokenLiquidity[msg.sender] = totalLiquidity;
+        token = IERC(_tokenAddress);
         require(IERC20(_tokenAddress).transferFrom(msg.sender, address(this), _tokenAmount));        
     }
 
-
-    //Only works for ETH to Token
     function tokenPrice(uint256 _inputTokenAmount, uint256 _inputTokenReserve, uint256 _outputTokenReserve) public view returns(uint256){
         uint k = _inputTokenReserve * _outputTokenReserve;
         uint yToken = k / (_inputTokenReserve + _inputTokenAmount);
         return _outputTokenReserve - yToken;    
     }
 
-    function ethToToken(address _tokenAddress) external payable returns(uint256){
+    function ethToToken(uint256 _inputEth) external payable returns(uint256){
         uint256 tokenReserve = IERC20(_tokenAddress).balanceOf(address(this));
-        uint256 ethReserve = address(this).balance - msg.value;
-        uint256 tokenAmount = tokenPrice(msg.value, ethReserve ,tokenReserve);
-        require(IERC20(_tokenAddress).transfer(msg.sender, tokenAmount), "Transaction Failed!");
+        uint256 ethReserve = address(this).balance - _inputEth;
+        uint256 tokenAmount = tokenPrice(_inputEth, ethReserve ,tokenReserve);
+        require(IERC20(_tokenAddress).transfer(msg.sender, tokenAmount), "DEX::ethToToken: Transaction Failed!");
         return tokenAmount;
     }
 
-    function tokenToEth(address _tokenAddress, uint _tokenAmount) external returns(uint256){
+    function ethToTokenSwap() external payable{
+        return ethToToken(msg.value);
+    }
+    
+    function tokenToEth(uint _tokenAmount) external returns(uint256){
         uint256 tokenReserve = IERC20(_tokenAddress).balanceOf(address(this));
         uint tokenSwapPrice = tokenPrice(_tokenAmount, tokenReserve, address(this).balance);
         (bool success,) = payable(msg.sender).call{value: tokenSwapPrice}("");
         require(success);
-        require(IERC20(_tokenAddress).transferFrom(msg.sender, address(this), _tokenAmount));
+        require(IERC20(_tokenAddress).transferFrom(msg.sender, address(this), _tokenAmount), "DEX::tokenToEth:Transaction Failed!");
         return tokenSwapPrice;
     }
 
@@ -56,7 +54,7 @@ contract DEX {
         uint tokenAmount = (msg.value * tokenBalance) / ethReserve;        
         tokenLiquidity[msg.sender] = tokenLiquidity[msg.sender] + msg.value;
         totalLiquidity = totalLiquidity + msg.value;
-        require(token.transferFrom(msg.sender, address(this), tokenAmount));
+        require(token.transferFrom(msg.sender, address(this), tokenAmount), "DEX::deposit:Transaction Failed!");
     }
 
     function withdraw(uint256 _amount) payable external{
@@ -67,8 +65,7 @@ contract DEX {
         totalLiquidity = totalLiquidity - ethAmount;
         (bool success,) = payable(msg.sender).call{value: ethAmount}("");
         require(success);
-        require(token.transfer(msg.sender, tokenAmount));
-
+        require(token.transfer(msg.sender, tokenAmount) , "DEX::withdraw:Transaction Failed!");
     }
 
 }

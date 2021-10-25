@@ -1,7 +1,7 @@
 /* eslint-disable prettier/prettier */
 /* eslint-disable no-undef */
 /* eslint-disable no-unused-vars */
-import { expect, assert } from "chai";
+import { expect } from "chai";
 import { Contract } from "ethers";
 import { ethers } from "hardhat";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
@@ -11,9 +11,10 @@ describe("DEX", async () => {
   let dex: Contract;
   let gold: Contract;
 
-  const approvalAmount = "100";
-  const tokenAndEth = ethers.utils.parseEther("10");
-  const exchangeTokens = ethers.utils.parseEther("0.5");
+  const approvalAmount = "1000";
+  const token = ethers.utils.parseEther("275");
+  const eth = ethers.utils.parseEther("110");
+  const exchangeTokens = ethers.utils.parseEther("5");
 
   before("Should be deployed", async () => {
     [owner] = await ethers.getSigners();
@@ -35,15 +36,32 @@ describe("DEX", async () => {
   });
 
   it("initialize DEX", async () => {
-    await dex.initialize(gold.address, tokenAndEth, { value: tokenAndEth });
+    await dex.initialize(gold.address, token, { value: eth });
     const totalLiq = await dex.totalLiquidity();
-    expect(totalLiq === tokenAndEth);
-    expect(dex.balance === tokenAndEth);
+    expect(totalLiq === eth);
+    expect(dex.balance === eth);
   });
 
-  it("Exchange eth for the token", async () => {
+  it("should calculate 5 eth for token", async () => {
+    const tokenPrice = await dex.tokenPrice(exchangeTokens, eth, token);
+    console.log(ethers.utils.formatEther(tokenPrice));
+  });
+
+  it("should swap 5 eth for the token", async () => {
     await dex.ethToToken(gold.address, { value: exchangeTokens });
-    const tokenBalance = await gold.balanceOf(owner.address);
-    console.log(ethers.utils.formatEther(tokenBalance));
+    const ethPossessed = await dex.balance;
+    const tokensPossessed = await gold.balanceOf(dex.address);
+    // console.log(
+    //   ethers.utils.formatEther(ethPossessed),
+    //   ethers.utils.formatEther(tokensPossessed)
+    // );
+  });
+
+  it("should swap 5 tokens for eth", async () => {
+    await dex.tokenToEth(gold.address, exchangeTokens);
+    const ethPossessed = await dex.address;
+    const tokensPossessed = await gold.balanceOf(dex.address);
+
+    console.log(ethPossessed);
   });
 });

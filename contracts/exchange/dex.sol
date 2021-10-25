@@ -5,17 +5,14 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract DEX {
 
-    // Variables, Events 
-
     IERC20 token;  
     uint256 public totalLiquidity;
-    mapping (address=>uint256) tokenLiquidity;
+    mapping (address=>uint256) public tokenLiquidity;
 
     modifier firstTimeOnly{
         require(totalLiquidity == 0, "DEX::initialize: already init!");
         _;
     }
-
     
     // Fallback
     // fallback () external payable {
@@ -28,35 +25,51 @@ contract DEX {
         require(IERC20(_tokenAddress).transferFrom(msg.sender, address(this), _tokenAmount));        
     }
 
-    function ethToToken(address _tokenAddress) external payable {
+
+    //Only works for ETH to Token
+    function tokenPrice(uint256 _inputTokenAmount, uint256 _inputTokenReserve, uint256 _outputTokenReserve) public view returns(uint256){
+        uint k = _inputTokenReserve * _outputTokenReserve;
+        uint yToken = k / (_inputTokenReserve + _inputTokenAmount);
+        return _outputTokenReserve - yToken;    
+    }
+
+    function ethToToken(address _tokenAddress) external payable returns(uint256){
         uint256 tokenReserve = IERC20(_tokenAddress).balanceOf(address(this));
-        uint256 tokenAmount = tokenPrice(msg.value, tokenReserve);
+        uint256 ethReserve = address(this).balance - msg.value;
+        uint256 tokenAmount = tokenPrice(msg.value, ethReserve ,tokenReserve);
         require(IERC20(_tokenAddress).transfer(msg.sender, tokenAmount), "Transaction Failed!");
+        return tokenAmount;
     }
 
-    // function tokenToEth(address _tokenAddress, uint _tokenAmount) external{
-    //     request(token(_tokenAddress).transferFrom(msg.sender, address(this), _tokenAmount))
-    //     tokenPrice = tokenPrice(_tokenAmount, )
-    //     // claculate token price
-    //     (bool success,) = payable(msg.sender).call{value: msg.value}("")
-    // }
-
-    function deposite() external{
-
+    function tokenToEth(address _tokenAddress, uint _tokenAmount) external returns(uint256){
+        uint256 tokenReserve = IERC20(_tokenAddress).balanceOf(address(this));
+        uint tokenSwapPrice = tokenPrice(_tokenAmount, tokenReserve, address(this).balance);
+        (bool success,) = payable(msg.sender).call{value: tokenSwapPrice}("");
+        require(success);
+        require(IERC20(_tokenAddress).transferFrom(msg.sender, address(this), _tokenAmount));
+        return tokenSwapPrice;
     }
 
-    function withdraw() external{
-
+    function deposit() payable external{
+        uint tokenBalance = token.balanceOf(address(this));
+        uint ethReserve = address(this).balance - msg.value;
+        uint tokenAmount = (msg.value * tokenBalance) / ethReserve;        
+        tokenLiquidity[msg.sender] = tokenLiquidity[msg.sender] + msg.value;
+        totalLiquidity = totalLiquidity + msg.value;
+        require(token.transferFrom(msg.sender, address(this), tokenAmount));
     }
 
-    function tokenPrice(uint256 _inputAmount, uint256 _tokenReserve) public view returns(uint256){
-        return ((( _inputAmount * _tokenReserve) * 1000) / (address(this).balance * 1000)) + 1;
+    function withdraw(uint256 _amount) payable external{
+        uint tokenBalance = token.balanceOf(address(this));        
+        uint ethAmount = (_amount * address(this).balance) / totalLiquidity;
+        uint tokenAmount = (_amount * tokenBalance) / totalLiquidity;
+        tokenLiquidity[msg.sender] = tokenLiquidity[msg.sender] - ethAmount;
+        totalLiquidity = totalLiquidity - ethAmount;
+        (bool success,) = payable(msg.sender).call{value: ethAmount}("");
+        require(success);
+        require(token.transfer(msg.sender, tokenAmount));
+
     }
-
-
-
-
-
 
 }
 

@@ -2,7 +2,7 @@
 /* eslint-disable no-undef */
 /* eslint-disable no-unused-vars */
 import { expect } from "chai";
-import { Contract } from "ethers";
+import { Contract, providers } from "ethers";
 import { ethers } from "hardhat";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
@@ -15,6 +15,16 @@ describe("DEX", async () => {
   const token = ethers.utils.parseEther("275");
   const eth = ethers.utils.parseEther("110");
   const exchangeTokens = ethers.utils.parseEther("5");
+
+  const getBalances = async () => {
+    const etherBalance = await ethers.provider.getBalance(dex.address);
+    const tokenBalance = await gold.balanceOf(dex.address);
+    console.log(
+      "before",
+      ethers.utils.formatEther(etherBalance),
+      ethers.utils.formatEther(tokenBalance)
+    );
+  };
 
   before("Should be deployed", async () => {
     [owner] = await ethers.getSigners();
@@ -44,24 +54,13 @@ describe("DEX", async () => {
 
   it("should calculate 5 eth for token", async () => {
     const tokenPrice = await dex.tokenPrice(exchangeTokens, eth, token);
-    console.log(ethers.utils.formatEther(tokenPrice));
   });
 
   it("should swap 5 eth for the token", async () => {
-    await dex.ethToToken(gold.address, { value: exchangeTokens });
-    const ethPossessed = await dex.balance;
-    const tokensPossessed = await gold.balanceOf(dex.address);
-    // console.log(
-    //   ethers.utils.formatEther(ethPossessed),
-    //   ethers.utils.formatEther(tokensPossessed)
-    // );
+    await dex.ethToTokenSwap({ value: exchangeTokens });
   });
 
   it("should swap 5 tokens for eth", async () => {
-    await dex.tokenToEth(gold.address, exchangeTokens);
-    const ethPossessed = await dex.address;
-    const tokensPossessed = await gold.balanceOf(dex.address);
-
-    console.log(ethPossessed);
+    await dex.tokenToEth(exchangeTokens);
   });
 });

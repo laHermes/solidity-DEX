@@ -20,7 +20,6 @@ describe("DEX", async () => {
     const etherBalance = await ethers.provider.getBalance(dex.address);
     const tokenBalance = await gold.balanceOf(dex.address);
     console.log(
-      "before",
       ethers.utils.formatEther(etherBalance),
       ethers.utils.formatEther(tokenBalance)
     );
@@ -29,7 +28,7 @@ describe("DEX", async () => {
   before("Should be deployed", async () => {
     [owner] = await ethers.getSigners();
 
-    const DEX = await ethers.getContractFactory("DEX");
+    const DEX = await ethers.getContractFactory("Dex");
     dex = await DEX.deploy();
     await dex.deployed();
 

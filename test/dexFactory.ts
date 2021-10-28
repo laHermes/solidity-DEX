@@ -8,20 +8,16 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
 describe("DexFactory", async () => {
   let owner: SignerWithAddress;
-  let dex: Contract;
+  let dfactory: Contract;
 
-
-  before("Should be deployed", async () => {
+  before("Deploy DEX factory", async () => {
     [owner] = await ethers.getSigners();
 
-    const DEX = await ethers.getContractFactory("DexFactory");
-    dex = await DEX.deploy();
-    await dex.deployed();
+    const DEXFactory = await ethers.getContractFactory("DexFactory");
+    dfactory = await DEXFactory.deploy();
+    await dfactory.deployed();
 
   });
 
-  it("runs", async()=>{
-    await dex.transfer()
-  })
  
-});
+ });

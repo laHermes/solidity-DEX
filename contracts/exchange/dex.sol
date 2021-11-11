@@ -42,11 +42,11 @@ contract Dex {
     function ethToToken(uint256 _inputEth) private returns (uint256) {
         uint256 tokenReserve = token.balanceOf(address(this));
         uint256 ethReserve = address(this).balance - _inputEth;
+        uint256 tokenAmount = tokenPrice(_inputEth, ethReserve, tokenReserve);
         require(
             tokenReserve > 0 && ethReserve > 0,
             "DEX::ethToToken: Reserve Too Low!"
         );
-        uint256 tokenAmount = tokenPrice(_inputEth, ethReserve, tokenReserve);
         require(
             token.transfer(msg.sender, tokenAmount),
             "DEX::ethToToken: Token Transaction Failed!"

@@ -17,6 +17,11 @@ contract Dex {
         payable
     {
         require(totalLiquidity == 0, "DEX::initialize: already init!");
+        require(
+            _tokenAddress != address(0),
+            "DEX::initialize:Token Address is 0!"
+        );
+        require(_tokenAmount != 0, "DEX::initialize: Token Amount is 0!");
         totalLiquidity = msg.value;
         tokenLiquidity[msg.sender] = totalLiquidity;
         token = IERC20(_tokenAddress);
@@ -77,26 +82,26 @@ contract Dex {
     function deposit() external payable {
         uint256 tokenBalance = token.balanceOf(address(this));
         uint256 ethReserve = address(this).balance - msg.value;
-        uint256 tokenAmount = (msg.value * tokenBalance) / ethReserve;
+        uint256 tokenAmount = msg.value * (tokenBalance / ethReserve);
         tokenLiquidity[msg.sender] = tokenLiquidity[msg.sender] + msg.value;
         totalLiquidity = totalLiquidity + msg.value;
         require(
             token.transferFrom(msg.sender, address(this), tokenAmount),
-            "DEX::deposit:Transaction Failed!"
+            "DEX::deposit:Token Transaction Failed!"
         );
     }
 
     function withdraw(uint256 _amount) external payable {
         uint256 tokenBalance = token.balanceOf(address(this));
-        uint256 ethAmount = (_amount * address(this).balance) / totalLiquidity;
-        uint256 tokenAmount = (_amount * tokenBalance) / totalLiquidity;
+        uint256 ethAmount = _amount * (address(this).balance / totalLiquidity);
+        uint256 tokenAmount = _amount * (tokenBalance / totalLiquidity);
         tokenLiquidity[msg.sender] = tokenLiquidity[msg.sender] - ethAmount;
         totalLiquidity = totalLiquidity - ethAmount;
         (bool success, ) = payable(msg.sender).call{value: ethAmount}("");
-        require(success);
+        require(success, "DEX::withdraw: ETH Transaction Failed!");
         require(
             token.transfer(msg.sender, tokenAmount),
-            "DEX::withdraw:Transaction Failed!"
+            "DEX::withdraw: Token Transaction Failed!"
         );
     }
 }

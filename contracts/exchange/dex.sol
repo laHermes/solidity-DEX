@@ -2,17 +2,35 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "./dexFactory.sol";
 
 contract Dex {
-    IERC20 token;
+    /* ========== STATE VARIABLES ========== */
+
+    IERC20 public token;
+    IERC20 public rewardToken;
+    DexFactory public factory;
+
+    uint256 public tokenSupply;
     uint256 public totalLiquidity;
     mapping(address => uint256) public tokenLiquidity;
+
+    uint256 public rewardRatePerBlock = 100;
+    uint256 public rewardPerToken;
+    uint256 public lastUpdateTime;
+
+    mapping(address => uint256) rewards;
 
     fallback() external payable {
         ethToToken(msg.value);
     }
 
     receive() external payable {}
+
+    modifier updateRewards() {
+        lastTimeUpdated = block.timestamp;
+        rewardPerToken = rewardPerToken();
+    }
 
     function initialize(address _tokenAddress, uint256 _tokenAmount)
         external
@@ -26,7 +44,10 @@ contract Dex {
         require(_tokenAmount != 0, "DEX::initialize: Token Amount is 0!");
         totalLiquidity = msg.value;
         tokenLiquidity[msg.sender] = totalLiquidity;
+        // For now, staking and reward tokens are the same
         token = IERC20(_tokenAddress);
+        rewardToken = IERC20(_tokenAddress);
+
         require(
             IERC20(_tokenAddress).transferFrom(
                 msg.sender,
@@ -44,6 +65,16 @@ contract Dex {
         uint256 k = _inputTokenReserve * _outputTokenReserve;
         uint256 yToken = k / (_inputTokenReserve + _inputTokenAmount);
         return _outputTokenReserve - yToken;
+    }
+
+    function rewardPerToken() public view returns (uint256) {
+        if (totalSupply == 0) {
+            return 0;
+        }
+
+        return
+            (block.timestamp - lastUpdateTime * rewardRatePerBlock * 1e18) /
+            totalSupply;
     }
 
     function ethToToken(uint256 _inputEth) private returns (uint256) {
@@ -97,8 +128,10 @@ contract Dex {
         uint256 tokenBalance = token.balanceOf(address(this));
         uint256 ethAmount = _amount * (address(this).balance / totalLiquidity);
         uint256 tokenAmount = _amount * (tokenBalance / totalLiquidity);
+
         tokenLiquidity[msg.sender] = tokenLiquidity[msg.sender] - ethAmount;
         totalLiquidity = totalLiquidity - ethAmount;
+
         (bool success, ) = payable(msg.sender).call{value: ethAmount}("");
         require(success, "DEX::withdraw: ETH Transaction Failed!");
         require(

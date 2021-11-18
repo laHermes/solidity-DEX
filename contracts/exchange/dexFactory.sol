@@ -10,7 +10,6 @@ contract DexFactory {
     );
 
     uint256 public tokenCount;
-    address[] public exchanges;
     mapping(address => address) public exchangeToToken;
     mapping(address => address) public tokenToExchange;
 
@@ -31,6 +30,7 @@ contract DexFactory {
         dex.initialize{value: msg.value}(_tokenAddress, _tokenAmount);
         tokenToExchange[_tokenAddress] = address(dex);
         exchangeToToken[address(dex)] = _tokenAddress;
+        tokenCount++;
 
         emit CreateExchange(_tokenAddress, address(dex));
     }

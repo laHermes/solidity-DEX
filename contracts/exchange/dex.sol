@@ -12,6 +12,8 @@ contract Dex {
         ethToToken(msg.value);
     }
 
+    receive() external payable {}
+
     function initialize(address _tokenAddress, uint256 _tokenAmount)
         external
         payable
@@ -38,7 +40,7 @@ contract Dex {
         uint256 _inputTokenAmount,
         uint256 _inputTokenReserve,
         uint256 _outputTokenReserve
-    ) public view returns (uint256) {
+    ) public pure returns (uint256) {
         uint256 k = _inputTokenReserve * _outputTokenReserve;
         uint256 yToken = k / (_inputTokenReserve + _inputTokenAmount);
         return _outputTokenReserve - yToken;

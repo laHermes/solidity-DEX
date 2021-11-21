@@ -6,19 +6,19 @@ import "./dexFactory.sol";
 
 contract Dex {
     /* ========== STATE VARIABLES ========== */
-
     IERC20 public token;
     IERC20 public rewardToken;
     DexFactory public factory;
 
     uint256 public tokenSupply;
     uint256 public totalLiquidity;
-    mapping(address => uint256) public tokenLiquidity;
-
     uint256 public rewardRatePerBlock = 100;
     uint256 public rewardPerToken;
     uint256 public lastUpdateTime;
 
+    mapping(address => uint256) public tokenLiquidity;
+    mapping(address => uint256) public userRewardPerTokenStored;
+    mapping(address => uint256) public tokensStaked;
     mapping(address => uint256) rewards;
 
     fallback() external payable {
@@ -27,26 +27,34 @@ contract Dex {
 
     receive() external payable {}
 
-    modifier updateRewards() {
+    modifier updateRewards(address _account) {
         lastTimeUpdated = block.timestamp;
         rewardPerToken = rewardPerToken();
+
+        rewards[account] = earned(_account);
+        userRewardPerTokenStored[_account] = rewardPerToken;
     }
 
-    function initialize(address _tokenAddress, uint256 _tokenAmount)
-        external
-        payable
-    {
+    function initialize(
+        address _tokenAddress,
+        uint256 _tokenAmount,
+        address _rewardTokenAddress
+    ) external payable {
         require(totalLiquidity == 0, "DEX::initialize: already init!");
         require(
             _tokenAddress != address(0),
             "DEX::initialize:Token Address is 0!"
+        );
+        require(
+            _rewardTokenAddress != address(0),
+            "DEX::initialize: Reward Token Address is 0!"
         );
         require(_tokenAmount != 0, "DEX::initialize: Token Amount is 0!");
         totalLiquidity = msg.value;
         tokenLiquidity[msg.sender] = totalLiquidity;
         // For now, staking and reward tokens are the same
         token = IERC20(_tokenAddress);
-        rewardToken = IERC20(_tokenAddress);
+        rewardToken = IERC20(rewardToken);
 
         require(
             IERC20(_tokenAddress).transferFrom(
@@ -112,11 +120,13 @@ contract Dex {
         return tokenSwapPrice;
     }
 
-    function deposit() external payable {
+    function deposit() external payable updateReward(msg.sender) {
         uint256 tokenBalance = token.balanceOf(address(this));
         uint256 ethReserve = address(this).balance - msg.value;
         uint256 tokenAmount = msg.value * (tokenBalance / ethReserve);
         tokenLiquidity[msg.sender] = tokenLiquidity[msg.sender] + msg.value;
+        tokensStaked[msg.sender] = tokensStaked[msg.sender] + tokenAmount;
+
         totalLiquidity = totalLiquidity + msg.value;
         require(
             token.transferFrom(msg.sender, address(this), tokenAmount),
@@ -124,12 +134,18 @@ contract Dex {
         );
     }
 
-    function withdraw(uint256 _amount) external payable {
+    function withdraw(uint256 _amount)
+        external
+        payable
+        updateReward(msg.sender)
+    {
         uint256 tokenBalance = token.balanceOf(address(this));
         uint256 ethAmount = _amount * (address(this).balance / totalLiquidity);
         uint256 tokenAmount = _amount * (tokenBalance / totalLiquidity);
 
         tokenLiquidity[msg.sender] = tokenLiquidity[msg.sender] - ethAmount;
+        tokensStaked[msg.sender] = tokensStaked[msg.sender] - tokenAmount;
+
         totalLiquidity = totalLiquidity - ethAmount;
 
         (bool success, ) = payable(msg.sender).call{value: ethAmount}("");

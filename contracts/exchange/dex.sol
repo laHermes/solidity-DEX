@@ -21,6 +21,8 @@ contract Dex {
     mapping(address => uint256) public tokensStaked;
     mapping(address => uint256) rewards;
 
+    /* ========== FALLBACKS & MODIFIERS ========== */
+
     fallback() external payable {
         ethToToken(msg.value);
     }
@@ -34,6 +36,8 @@ contract Dex {
         rewards[account] = earned(_account);
         userRewardPerTokenStored[_account] = rewardPerToken;
     }
+
+    /* ========== FUNCTIONS ========== */
 
     function initialize(
         address _tokenAddress,
@@ -55,7 +59,7 @@ contract Dex {
         // For now, staking and reward tokens are the same
         token = IERC20(_tokenAddress);
         rewardToken = IERC20(rewardToken);
-
+        factory = DexFactory(msg.sender);
         require(
             IERC20(_tokenAddress).transferFrom(
                 msg.sender,
@@ -123,7 +127,7 @@ contract Dex {
     function deposit() external payable updateReward(msg.sender) {
         uint256 tokenBalance = token.balanceOf(address(this));
         uint256 ethReserve = address(this).balance - msg.value;
-        uint256 tokenAmount = msg.value * (tokenBalance / ethReserve);
+        uint256 tokenAmount = tokenBalance * (msg.value / ethReserve);
         tokenLiquidity[msg.sender] = tokenLiquidity[msg.sender] + msg.value;
         tokensStaked[msg.sender] = tokensStaked[msg.sender] + tokenAmount;
 

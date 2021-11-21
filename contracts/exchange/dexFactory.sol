@@ -13,10 +13,11 @@ contract DexFactory {
     mapping(address => address) public exchangeToToken;
     mapping(address => address) public tokenToExchange;
 
-    function createExchange(address _tokenAddress, uint256 _tokenAmount)
-        external
-        payable
-    {
+    function createExchange(
+        address _tokenAddress,
+        uint256 _tokenAmount,
+        address _LPtokenAddress
+    ) external payable {
         require(
             _tokenAddress != address(0),
             "DexFactory::createExchange: Token Address is 0!"
@@ -27,7 +28,11 @@ contract DexFactory {
         );
         require(msg.value == 0, "DexFactory::createExchange: ETH sent is 0!");
         Dex dex = new Dex();
-        dex.initialize{value: msg.value}(_tokenAddress, _tokenAmount);
+        dex.initialize{value: msg.value}(
+            _tokenAddress,
+            _tokenAmount,
+            _LPtokenAddress
+        );
         tokenToExchange[_tokenAddress] = address(dex);
         exchangeToToken[address(dex)] = _tokenAddress;
         tokenCount++;

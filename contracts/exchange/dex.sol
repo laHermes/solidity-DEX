@@ -10,15 +10,15 @@ contract Dex {
     IERC20 public rewardToken;
     DexFactory public factory;
 
-    uint256 public tokenSupply;
+    uint256 public totalSupply;
     uint256 public totalLiquidity;
     uint256 public rewardRatePerBlock = 100;
-    uint256 public rewardPerToken;
+    uint256 public rewardPerTokenAmount;
     uint256 public lastUpdateTime;
 
     mapping(address => uint256) public tokenLiquidity;
-    mapping(address => uint256) public userRewardPerTokenStored;
     mapping(address => uint256) public tokensStaked;
+    mapping(address => uint256) public userRewardPerTokenPaid;
     mapping(address => uint256) rewards;
 
     /* ========== FALLBACKS & MODIFIERS ========== */
@@ -29,12 +29,13 @@ contract Dex {
 
     receive() external payable {}
 
-    modifier updateRewards(address _account) {
-        lastTimeUpdated = block.timestamp;
-        rewardPerToken = rewardPerToken();
+    modifier updateRewards() {
+        lastUpdateTime = block.timestamp;
+        rewardPerTokenAmount = rewardPerToken();
 
-        rewards[account] = earned(_account);
-        userRewardPerTokenStored[_account] = rewardPerToken;
+        rewards[msg.sender] = earned(msg.sender);
+        userRewardPerTokenPaid[msg.sender] = rewardPerTokenAmount;
+        _;
     }
 
     /* ========== FUNCTIONS ========== */
@@ -59,6 +60,7 @@ contract Dex {
         // For now, staking and reward tokens are the same
         token = IERC20(_tokenAddress);
         rewardToken = IERC20(rewardToken);
+        // rewardToken.mint(msg.sender, _tokenAmount * 1e18);
         factory = DexFactory(msg.sender);
         require(
             IERC20(_tokenAddress).transferFrom(
@@ -67,6 +69,13 @@ contract Dex {
                 _tokenAmount
             )
         );
+    }
+
+    function earned(address _account) public view returns (uint256) {
+        return
+            ((tokensStaked[_account] *
+                (rewardPerToken() - userRewardPerTokenPaid[_account])) / 1e18) +
+            rewards[_account];
     }
 
     function tokenPrice(
@@ -124,7 +133,7 @@ contract Dex {
         return tokenSwapPrice;
     }
 
-    function deposit() external payable updateReward(msg.sender) {
+    function deposit() external payable updateRewards {
         uint256 tokenBalance = token.balanceOf(address(this));
         uint256 ethReserve = address(this).balance - msg.value;
         uint256 tokenAmount = tokenBalance * (msg.value / ethReserve);
@@ -138,11 +147,7 @@ contract Dex {
         );
     }
 
-    function withdraw(uint256 _amount)
-        external
-        payable
-        updateReward(msg.sender)
-    {
+    function withdraw(uint256 _amount) external payable updateRewards {
         uint256 tokenBalance = token.balanceOf(address(this));
         uint256 ethAmount = _amount * (address(this).balance / totalLiquidity);
         uint256 tokenAmount = _amount * (tokenBalance / totalLiquidity);

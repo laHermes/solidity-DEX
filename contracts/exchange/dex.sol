@@ -4,10 +4,13 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "./DexFactory.sol";
 
+/// @title Solidity-swap
+/// @author Lazar
+/// @notice This is a personal project with the goal of better understanding AMM
+/// @notice This contract is not tested and is currently in dev phase DO NOT USE IT!
 contract Dex is ERC20 {
     /* ========== STATE VARIABLES ========== */
     IERC20 public token;
-    IERC20 public rewardToken;
     DexFactory public factory;
 
     uint256 public invariant;
@@ -40,29 +43,30 @@ contract Dex is ERC20 {
     }
 
     /* ========== FUNCTIONS ========== */
-    constructor(
-        address _tokenAddress,
-        uint256 _tokenAmount,
-        address _rewardTokenAddress
-    ) payable ERC20("LPDex", "LPD") {
+
+    /// Constructor
+    /// @param _tokenAddress ERC20 contract address
+    /// @param _tokenAmount amount of ERC20 tokens
+    /// @dev msg.value amount of ETH to be pooled
+    /// @dev invariant = msg.value * _tokenAmount
+    /// @dev LP token amount is a percentage (share) of total liquidity provided by user
+    /// @dev LP token amount = tokenLiquidity[msg.sender] / totalLiquidity
+    constructor(address _tokenAddress, uint256 _tokenAmount)
+        payable
+        ERC20("LPDex", "LPD")
+    {
         require(totalLiquidity == 0, "DEX::initialize: already init!");
         require(
             _tokenAddress != address(0),
             "DEX::initialize:Token Address is 0!"
         );
-        require(
-            _rewardTokenAddress != address(0),
-            "DEX::initialize: Reward Token Address is 0!"
-        );
+
         require(_tokenAmount != 0, "DEX::initialize: Token Amount is 0!");
-        invariant = _inputTokenReserve * _outputTokenReserve;
+        invariant = msg.value * _tokenAmount;
 
         totalLiquidity = msg.value;
         tokenLiquidity[msg.sender] = totalLiquidity;
-        // For now, staking and reward tokens are the same
         token = IERC20(_tokenAddress);
-        rewardToken = IERC20(rewardToken);
-        // rewardToken.mint(msg.sender, _tokenAmount * 1e18);
         factory = DexFactory(msg.sender);
         require(
             IERC20(_tokenAddress).transferFrom(
@@ -89,7 +93,7 @@ contract Dex is ERC20 {
         uint256 _inputTokenAmount,
         uint256 _inputTokenReserve,
         uint256 _outputTokenReserve
-    ) public pure returns (uint256) {
+    ) public view returns (uint256) {
         uint256 yToken = invariant / (_inputTokenReserve + _inputTokenAmount);
         return _outputTokenReserve - yToken;
     }

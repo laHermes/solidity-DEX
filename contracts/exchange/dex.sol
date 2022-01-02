@@ -36,13 +36,12 @@ contract Dex is ERC20 {
     modifier updateRewards() {
         lastUpdateTime = block.timestamp;
         rewardPerTokenAmount = rewardPerToken();
-
         rewards[msg.sender] = earned(msg.sender);
         userRewardPerTokenPaid[msg.sender] = rewardPerTokenAmount;
         _;
     }
 
-    /* ========== FUNCTIONS ========== */
+    /* ========== CONSTRUCTOR ========== */
 
     /// Constructor
     /// @param _tokenAddress ERC20 contract address
@@ -76,6 +75,8 @@ contract Dex is ERC20 {
             )
         );
     }
+
+    /* ========== FUNCTIONS ========== */
 
     function earned(address _account) public view returns (uint256) {
         return
@@ -144,6 +145,10 @@ contract Dex is ERC20 {
     }
 
     function deposit() external payable updateRewards {
+        require(
+            msg.value > 0,
+            "Dex::deposit: value sent must be greater than 0!"
+        );
         uint256 tokenBalance = token.balanceOf(address(this));
         uint256 ethReserve = address(this).balance - msg.value;
         uint256 tokenAmount = tokenBalance * (msg.value / ethReserve);
@@ -158,6 +163,7 @@ contract Dex is ERC20 {
     }
 
     function withdraw(uint256 _amount) external payable updateRewards {
+        require(_amount > 0, "Dex::withdraw: amount must be greater than 0!");
         uint256 tokenBalance = token.balanceOf(address(this));
         uint256 ethAmount = _amount * (address(this).balance / totalLiquidity);
         uint256 tokenAmount = _amount * (tokenBalance / totalLiquidity);

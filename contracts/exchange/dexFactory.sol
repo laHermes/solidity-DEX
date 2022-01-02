@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
-import "./dex.sol";
+import "./Dex.sol";
 
 contract DexFactory {
     event CreateExchange(
@@ -27,12 +27,12 @@ contract DexFactory {
             "DexFactory::createExchange: Token Amount is 0!"
         );
         require(msg.value == 0, "DexFactory::createExchange: ETH sent is 0!");
-        Dex dex = new Dex();
-        dex.initialize{value: msg.value}(
+        Dex dex = new Dex{value: msg.value}(
             _tokenAddress,
             _tokenAmount,
             _LPtokenAddress
         );
+
         tokenToExchange[_tokenAddress] = address(dex);
         exchangeToToken[address(dex)] = _tokenAddress;
         tokenCount++;

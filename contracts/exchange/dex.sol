@@ -1,16 +1,17 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "./dexFactory.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "./DexFactory.sol";
 
-contract Dex {
+contract Dex is ERC20 {
     /* ========== STATE VARIABLES ========== */
     IERC20 public token;
     IERC20 public rewardToken;
     DexFactory public factory;
 
-    uint256 public totalSupply;
+    uint256 public invariant;
+    uint256 public totalSupplySwap;
     uint256 public totalLiquidity;
     uint256 public rewardRatePerBlock = 100;
     uint256 public rewardPerTokenAmount;
@@ -39,12 +40,11 @@ contract Dex {
     }
 
     /* ========== FUNCTIONS ========== */
-
-    function initialize(
+    constructor(
         address _tokenAddress,
         uint256 _tokenAmount,
         address _rewardTokenAddress
-    ) external payable {
+    ) payable ERC20("LPDex", "LPD") {
         require(totalLiquidity == 0, "DEX::initialize: already init!");
         require(
             _tokenAddress != address(0),
@@ -55,6 +55,8 @@ contract Dex {
             "DEX::initialize: Reward Token Address is 0!"
         );
         require(_tokenAmount != 0, "DEX::initialize: Token Amount is 0!");
+        invariant = _inputTokenReserve * _outputTokenReserve;
+
         totalLiquidity = msg.value;
         tokenLiquidity[msg.sender] = totalLiquidity;
         // For now, staking and reward tokens are the same
@@ -78,29 +80,33 @@ contract Dex {
             rewards[_account];
     }
 
+    /// Return amount of tokens to be received.
+    /// @param _inputTokenAmount amount of tokens to be swapped for target token
+    /// @param _inputTokenReserve current reserves of  input token (ETH or ERC20)
+    /// @param _outputTokenReserve current reserves of output token (ETH or ERC20)
+    /// @return amount of tokens that can be swapped for a given input amount
     function tokenPrice(
         uint256 _inputTokenAmount,
         uint256 _inputTokenReserve,
         uint256 _outputTokenReserve
     ) public pure returns (uint256) {
-        uint256 k = _inputTokenReserve * _outputTokenReserve;
-        uint256 yToken = k / (_inputTokenReserve + _inputTokenAmount);
+        uint256 yToken = invariant / (_inputTokenReserve + _inputTokenAmount);
         return _outputTokenReserve - yToken;
     }
 
     function rewardPerToken() public view returns (uint256) {
-        if (totalSupply == 0) {
+        if (totalSupplySwap == 0) {
             return 0;
         }
 
         return
             (block.timestamp - lastUpdateTime * rewardRatePerBlock * 1e18) /
-            totalSupply;
+            totalSupplySwap;
     }
 
     function ethToToken(uint256 _inputEth) private returns (uint256) {
-        uint256 tokenReserve = token.balanceOf(address(this));
         uint256 ethReserve = address(this).balance - _inputEth;
+        uint256 tokenReserve = token.balanceOf(address(this));
         uint256 tokenAmount = tokenPrice(_inputEth, ethReserve, tokenReserve);
         require(
             tokenReserve > 0 && ethReserve > 0,

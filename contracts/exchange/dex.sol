@@ -80,19 +80,42 @@ contract Dex is LPToken {
         return _outputTokenReserve - yToken;
     }
 
+    function tokenInETH(uint256 _inputEth)
+        public
+        view
+        returns (
+            uint256 price,
+            uint256 ethReserve,
+            uint256 tokenReserve
+        )
+    {
+        ethReserve = address(this).balance - _inputEth;
+        tokenReserve = token.balanceOf(address(this));
+        price = tokenPrice(_inputEth, ethReserve, tokenReserve);
+    }
+
+    function ethInToken(uint256 _inputToken)
+        public
+        view
+        returns (uint256 price, uint256 tokenReserve)
+    {
+        tokenReserve = token.balanceOf(address(this));
+        price = tokenPrice(_inputToken, tokenReserve, address(this).balance);
+    }
+
     function ethToToken(uint256 _inputEth) private returns (uint256) {
-        uint256 ethReserve = address(this).balance - _inputEth;
-        uint256 tokenReserve = token.balanceOf(address(this));
-        uint256 tokenAmount = tokenPrice(_inputEth, ethReserve, tokenReserve);
+        (uint256 price, uint256 ethReserve, uint256 tokenReserve) = tokenInETH(
+            _inputEth
+        );
         require(
             tokenReserve > 0 && ethReserve > 0,
             "DEX::ethToToken: Reserve Too Low!"
         );
         require(
-            token.transfer(msg.sender, tokenAmount),
+            token.transfer(msg.sender, price),
             "DEX::ethToToken: Token Transaction Failed!"
         );
-        return tokenAmount;
+        return price;
     }
 
     /**
@@ -106,19 +129,15 @@ contract Dex is LPToken {
     @dev swap ERC20 token for ETH 
     **/
     function tokenToEth(uint256 _tokenAmount) external returns (uint256) {
-        uint256 tokenReserve = token.balanceOf(address(this));
-        uint256 tokenSwapPrice = tokenPrice(
-            _tokenAmount,
-            tokenReserve,
-            address(this).balance
-        );
-        (bool success, ) = payable(msg.sender).call{value: tokenSwapPrice}("");
+        (uint256 price, uint256 tokenReserve) = ethInToken(_tokenAmount);
+        (bool success, ) = payable(msg.sender).call{value: price}("");
         require(success);
         require(
             token.transferFrom(msg.sender, address(this), _tokenAmount),
             "DEX::tokenToEth: Ether Transaction Failed!"
         );
-        return tokenSwapPrice;
+        require(tokenReserve > 0, "DEX::tokenToETH: Token reserve can't be 0!");
+        return price;
     }
 
     /**

@@ -4,10 +4,12 @@ pragma solidity ^0.8.0;
 import "./LPToken.sol";
 import "./DexFactory.sol";
 
-/// @title Solidity-swap
-/// @author Lazar
-/// @notice This is a personal project with the goal of better understanding AMM
-/// @notice This contract is not tested and is currently in dev phase DO NOT USE IT!
+/**
+ @title Solidity-swap
+ @author Lazar
+ @notice This is a personal project
+ @notice This contract is not tested and is currently in dev phase DO NOT USE IT!
+**/
 
 contract Dex is LPToken {
     /* ========== STATE VARIABLES ========== */
@@ -18,6 +20,18 @@ contract Dex is LPToken {
     uint256 public totalLiquidity;
 
     mapping(address => uint256) public tokenLiquidity;
+
+    event ExhangeEth(
+        address indexed _account,
+        uint256 tokensProvided,
+        uint256 ethProvided
+    );
+
+    event ExhangeToken(
+        address indexed _account,
+        uint256 tokensProvided,
+        uint256 ethProvided
+    );
 
     /* ========== FALLBACKS & MODIFIERS ========== */
 

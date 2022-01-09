@@ -6,6 +6,8 @@ import "./Dex.sol";
 contract DexFactory {
     event CreateExchange(
         address indexed TokenAddress,
+        uint256 tokensProvided,
+        uint256 ethProvided,
         address indexed ExchangeAddress
     );
 

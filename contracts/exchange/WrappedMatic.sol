@@ -15,7 +15,7 @@ contract WrappedMatic is ERC20 {
     }
 
     function burn(uint256 _amount) external {
-        msg.sender.safeTransfer(_amount);
+        transfer(msg.sender, _amount);
         _burn(msg.sender, _amount);
         emit Burn(msg.sender, _amount);
     }

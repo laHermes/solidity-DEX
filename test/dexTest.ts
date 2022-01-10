@@ -8,58 +8,60 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 
 describe('DEX', async () => {
 	let owner: SignerWithAddress;
-	let dex: Contract;
-	let gold: Contract;
+	let factory: Contract;
+	let exchange: Contract;
+	let erc20: Contract;
 
 	const approvalAmount = '1000';
 	const token = ethers.utils.parseEther('275');
 	const eth = ethers.utils.parseEther('110');
 	const exchangeTokens = ethers.utils.parseEther('5');
 
-	const getBalances = async () => {
-		const etherBalance = await ethers.provider.getBalance(dex.address);
-		const tokenBalance = await gold.balanceOf(dex.address);
-		console.log(
-			ethers.utils.formatEther(etherBalance),
-			ethers.utils.formatEther(tokenBalance)
-		);
-	};
-
-	before('Should be deployed', async () => {
+	before('Deploy Factory & ERC20 token', async () => {
 		[owner] = await ethers.getSigners();
 
-		const DEX = await ethers.getContractFactory('Dex');
-		dex = await DEX.deploy();
-		await dex.deployed();
+		const ExchangeFactory = await ethers.getContractFactory('ExchangeFactory');
+		factory = await ExchangeFactory.deploy();
+		await factory.deployed();
 
-		const GOLD = await ethers.getContractFactory('Gold');
-		gold = await GOLD.deploy();
-		await gold.deployed();
+		const ERC20Token = await ethers.getContractFactory('WrappedMatic');
+		erc20 = await ERC20Token.deploy();
+		await erc20.deployed();
 	});
 
-	it('approve dex to spend erc20 tokens', async () => {
+	it('should approve factory to spend erc20 tokens', async () => {
 		const approval = ethers.utils.parseEther(approvalAmount);
-		gold.approve(dex.address, approval);
-		const allowance = await gold.allowance(owner.address, dex.address);
+		erc20.approve(factory.address, approval);
+		const allowance = await erc20.allowance(owner.address, factory.address);
 		expect(approvalAmount === allowance);
 	});
 
-	it('initialize DEX', async () => {
-		await dex.initialize(gold.address, token, { value: eth });
-		const totalLiq = await dex.totalLiquidity();
+	it('should create an exchange', async () => {
+		await factory.createExchange(erc20.address, token, { value: eth });
+		exchange = factory.getExchange(erc20.address);
+		const totalLiq = await exchange.totalLiquidity();
 		expect(totalLiq).to.be.equal(eth);
-		expect(dex.balance).to.be.equal(eth);
+		expect(exchange.balance).to.be.equal(eth);
 	});
 
-	it('should calculate 5 eth for token', async () => {
-		const tokenPrice = await dex.tokenPrice(exchangeTokens, eth, token);
-	});
+	// it('should calculate 5 eth for token', async () => {
+	// 	const tokenPrice = await dex.tokenPrice(exchangeTokens, eth, token);
+	// });
 
-	it('should swap 5 eth for the token', async () => {
-		await dex.ethToTokenSwap({ value: exchangeTokens });
-	});
+	// it('should swap 5 eth for the token', async () => {
+	// 	await dex.ethToTokenSwap({ value: exchangeTokens });
+	// });
 
-	it('should swap 5 tokens for eth', async () => {
-		await dex.tokenToEth(exchangeTokens);
-	});
+	// it('should swap 5 tokens for eth', async () => {
+	// 	await dex.tokenToEth(exchangeTokens);
+	// });
 });
+
+// const getBalances = async () => {
+// 	const etherBalance = await ethers.provider.getBalance(dex.address);
+// 	const tokenBalance = await gold.balanceOf(dex.address);
+// 	console.log(
+// 		ethers.utils.formatEther(etherBalance),
+// 		ethers.utils.formatEther(tokenBalance)
+// 	);
+// };

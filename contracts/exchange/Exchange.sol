@@ -51,30 +51,15 @@ contract Exchange is LPToken {
      @notice LP token amount is a percentage (share) of total liquidity provided by user    
      @dev LP token amount = tokenLiquidity[msg.sender] / totalLiquidity
      **/
-    constructor(address _tokenAddress, uint256 _tokenAmount)
-        payable
-        LPToken("LPDex", "LPD")
-    {
+    constructor(address _tokenAddress) LPToken("LPDex", "LPD") {
         require(totalLiquidity == 0, "DEX::initialize: already init!");
         require(
             _tokenAddress != address(0),
             "DEX::initialize:Token Address is 0!"
         );
 
-        require(_tokenAmount != 0, "DEX::initialize: Token Amount is 0!");
-        invariant = msg.value * _tokenAmount;
-
-        totalLiquidity = msg.value;
-        tokenLiquidity[msg.sender] = totalLiquidity;
         token = IERC20(_tokenAddress);
         factory = ExchangeFactory(msg.sender);
-        require(
-            IERC20(_tokenAddress).transferFrom(
-                msg.sender,
-                address(this),
-                _tokenAmount
-            )
-        );
     }
 
     /* ========== FUNCTIONS ========== */
@@ -157,7 +142,7 @@ contract Exchange is LPToken {
     /**
     @dev deposit ERC20 token along with ETH
     **/
-    function deposit() external payable updateRewards {
+    function deposit() external payable {
         require(
             msg.value > 0,
             "Dex::deposit: value sent must be greater than 0!"
@@ -165,6 +150,7 @@ contract Exchange is LPToken {
         uint256 tokenBalance = token.balanceOf(address(this));
         uint256 ethReserve = address(this).balance - msg.value;
         uint256 tokenAmount = tokenBalance * (msg.value / ethReserve);
+
         tokenLiquidity[msg.sender] = tokenLiquidity[msg.sender] + msg.value;
         tokensStaked[msg.sender] = tokensStaked[msg.sender] + tokenAmount;
 
@@ -178,7 +164,7 @@ contract Exchange is LPToken {
     /**
     @dev Withdraw ERC20 token along with ETH
     **/
-    function withdraw(uint256 _amount) external payable updateRewards {
+    function withdraw(uint256 _amount) external payable {
         require(_amount > 0, "Dex::withdraw: amount must be greater than 0!");
         uint256 tokenBalance = token.balanceOf(address(this));
         uint256 ethAmount = _amount * (address(this).balance / totalLiquidity);
